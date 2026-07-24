@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>My Bookings - Slotify</title>
+    <!-- Preconnect for faster font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@0.525.0/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/api-config.js"></script>
+    <script>
+        (function() {
+            const originalFetch = window.fetch;
+            const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : BACKEND_URL;
+            
+            window.fetch = function(input, init) {
+                if (typeof input === 'string' && input.startsWith('/')) {
+                    if (window.location.origin !== BACKEND_URL) {
+                        input = API_BASE + input;
+                    }
+                }
+                init = init || {};
+                init.credentials = 'include';
+                return originalFetch(input, init);
+            };
+        })();
+    </script>
+</head>
+<body class="bg-slate-50 flex flex-col min-h-screen pb-20 select-none safe-area-bottom">
+
+    <!-- Top Navbar -->
+    <nav class="bg-gradient-to-r from-brand-600 to-indigo-800 text-white sticky top-0 z-40 shadow-md px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <button onclick="window.history.back()" class="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition active:scale-95 flex items-center justify-center">
+                <span class="material-symbols-rounded text-white text-sm">arrow_back</span>
+            </button>
+            <h1 class="font-extrabold text-lg tracking-tight">My Reservations</h1>
+        </div>
+        <div class="bg-white/10 p-2 rounded-xl text-white flex items-center justify-center">
+            <span class="material-symbols-rounded text-white text-sm">book_online</span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 px-4 py-6 w-full max-w-lg mx-auto space-y-6">
+        
+        <!-- Toggle buttons upcoming vs completed -->
+        <div class="bg-slate-100 p-1 rounded-2xl grid grid-cols-2 gap-1 text-center font-bold text-xs shadow-inner">
+            <button onclick="changeBookingsSubTab('upcoming')" id="subtab-upcoming" class="py-2.5 rounded-xl text-slate-700 bg-white shadow-sm transition">Upcoming</button>
+            <button onclick="changeBookingsSubTab('completed')" id="subtab-completed" class="py-2.5 rounded-xl text-slate-400 transition">Completed</button>
+        </div>
+
+        <div class="flex justify-between items-center px-1">
+            <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest">Logged Activities</h3>
+            <button onclick="window.location.href='dashboard.html'" class="text-xs text-brand-600 font-extrabold hover:underline flex items-center">
+                <span class="material-symbols-rounded text-sm mr-1">add</span> New Booking
+            </button>
+        </div>
+        
+        <!-- Bookings List -->
+        <div id="bookings-list" class="space-y-3.5 pb-8">
+             <div class="text-center py-10 text-slate-400 font-bold animate-pulse text-xs">Querying reservations...</div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation Bar (Mobile only) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 pt-2 pb-6 z-40 flex justify-around items-center shadow-2xl safe-area-bottom" style="padding-bottom: calc(16px + env(safe-area-inset-bottom, 16px));">
+        <a href="dashboard.html" class="flex flex-col items-center space-y-1 text-slate-500">
+            <div class="nav-pill py-1 px-4 rounded-full flex items-center justify-center">
+                <span class="material-symbols-rounded">home</span>
+            </div>
+            <span class="text-[9px] font-bold tracking-wider text-slate-700">Home</span>
+        </a>
+        <a href="calendar_view.html" class="flex flex-col items-center space-y-1 text-slate-500">
+            <div class="nav-pill py-1 px-4 rounded-full flex items-center justify-center">
+                <span class="material-symbols-rounded">calendar_month</span>
+            </div>
+            <span class="text-[9px] font-bold tracking-wider text-slate-700">Calendar</span>
+        </a>
+        <a href="mybookings.html" class="flex flex-col items-center space-y-1 text-brand-600">
+            <div class="nav-pill nav-pill-active py-1 px-4 rounded-full flex items-center justify-center">
+                <span class="material-symbols-rounded">book_online</span>
+            </div>
+            <span class="text-[9px] font-bold tracking-wider text-brand-700">Bookings</span>
+        </a>
+        <a href="dashboard.html?tab=profile" class="flex flex-col items-center space-y-1 text-slate-500">
+            <div class="nav-pill py-1 px-4 rounded-full flex items-center justify-center">
+                <span class="material-symbols-rounded">person</span>
+            </div>
+            <span class="text-[9px] font-bold tracking-wider text-slate-700">Profile</span>
+        </a>
+    </nav>
+
+    <script>
+        let currentUserId = null;
+        let bookings = [];
+        let activeSubTab = 'upcoming';
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+
+        async function loadUser() {
+            try {
+                const res = await fetch("/current_user");
+                const user = await res.json();
+                if (!user || !user.id) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                currentUserId = user.id;
+            } catch(e) {
+                console.error(e);
+                window.location.href = 'index.html';
+            }
+        }
+
+        async function loadBookings() {
+            try {
+                const res = await fetch("/bookings");
+                bookings = await res.json();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function getMyBookings() {
+            return bookings.filter(b => b.faculty_id === currentUserId);
+        }
+
+        function changeBookingsSubTab(tabName) {
+            activeSubTab = tabName;
+            
+            const tabUpcoming = document.getElementById('subtab-upcoming');
+            const tabCompleted = document.getElementById('subtab-completed');
+            
+            if(tabName === 'upcoming') {
+                tabUpcoming.className = "py-2.5 rounded-xl text-slate-700 bg-white shadow-sm transition";
+                tabCompleted.className = "py-2.5 rounded-xl text-slate-400 transition";
+            } else {
+                tabUpcoming.className = "py-2.5 rounded-xl text-slate-400 transition";
+                tabCompleted.className = "py-2.5 rounded-xl text-slate-700 bg-white shadow-sm transition";
+            }
+            
+            renderMyBookings();
+        }
+
+        async function renderMyBookings() {
+            try {
+                const data = getMyBookings();
+                const container = document.getElementById('bookings-list');
+                container.innerHTML = '';
+
+                const todayStr = new Date().toISOString().split('T')[0];
+                
+                // Filter data based on chosen active tab
+                let filtered = [];
+                if(activeSubTab === 'upcoming') {
+                    filtered = data.filter(b => b.date >= todayStr);
+                } else {
+                    filtered = data.filter(b => b.date < todayStr);
+                }
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `
+                        <div class="md3-card p-8 text-center flex flex-col items-center">
+                            <div class="bg-slate-50 p-4 rounded-2xl text-slate-400 mb-3 border border-slate-100 flex items-center justify-center">
+                                <span class="material-symbols-rounded text-slate-400" style="font-size: 32px;">clipboard</span>
+                            </div>
+                            <p class="text-sm font-bold text-slate-800">No bookings logged</p>
+                            <p class="text-xs text-slate-500 mt-1 max-w-[200px] leading-relaxed">No laboratory reservations available in this tab.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                filtered.forEach((b) => {
+                    const card = document.createElement('div');
+                    card.className = 'md3-card p-4 flex flex-col justify-between space-y-4';
+                    
+                    const dateObj = new Date(b.date);
+                    const monthName = dateObj.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                    const dayNum = dateObj.getDate();
+
+                    let actionHtml = '';
+                    if(activeSubTab === 'upcoming') {
+                        actionHtml = `<button onclick="cancelBooking('${b.lab}', ${b.period}, '${b.date}')" class="w-full btn-danger py-3 text-xs">Cancel Booking</button>`;
+                    } else {
+                        actionHtml = `<span class="w-full bg-slate-200 text-slate-800 text-center font-bold py-3 rounded-2xl text-xs block border border-slate-300 cursor-not-allowed flex items-center justify-center"><span class="material-symbols-rounded text-green-600 text-sm mr-1">check_circle</span> Completed Session</span>`;
+                    }
+
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3.5">
+                                <div class="bg-brand-50 border border-brand-100 text-brand-600 font-extrabold flex flex-col items-center justify-center w-12 h-14 rounded-2xl">
+                                    <span class="text-[9px] tracking-wider uppercase font-bold">${monthName}</span>
+                                    <span class="text-lg font-black leading-none mt-0.5">${dayNum}</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-900">📍 ${b.lab}</h4>
+                                    <p class="text-xs text-slate-700 font-medium mt-0.5">${b.faculty_name || 'Session'} • Period ${b.period}</p>
+                                    <p class="text-[10px] text-slate-600 font-mono mt-0.5">${getTimeForPeriod(b.period)}</p>
+                                </div>
+                            </div>
+                            <span class="chip chip-success text-[9px] font-bold">Confirmed</span>
+                        </div>
+                        ${actionHtml}
+                    `;
+                    container.appendChild(card);
+                });
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+            } catch (e) {
+                document.getElementById('bookings-list').innerHTML = '<div class="text-center py-10 text-red-500 font-bold">Failed to load reservations list</div>';
+            }
+        }
+
+        function getTimeForPeriod(p) {
+            const times = {
+                1: "08:45 AM - 09:35 AM",
+                2: "09:35 AM - 10:25 AM",
+                3: "10:45 AM - 11:35 AM",
+                4: "11:35 AM - 12:25 PM",
+                5: "01:15 PM - 02:05 PM",
+                6: "02:05 PM - 02:55 PM",
+                7: "03:10 PM - 04:00 PM",
+                8: "04:00 PM - 04:50 PM"
+            };
+            return times[p] || "Session Time";
+        }
+
+        async function cancelBooking(lab, period, date) {
+            if (!confirm('Cancel this booking?')) return;
+            await fetch("/cancel", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ lab, period, date })
+            });
+            await init();
+        }
+
+        async function init() {
+            document.getElementById('bookings-list').innerHTML = '<div class="text-center py-10 text-slate-400 font-bold animate-pulse text-xs">Querying reservations...</div>';
+            await loadUser();
+            await loadBookings();
+            changeBookingsSubTab(activeSubTab);
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Admin Panel - Slotify</title>
+    <!-- Preconnect for faster font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@0.525.0/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/api-config.js"></script>
+    <script>
+        (function() {
+            const originalFetch = window.fetch;
+            const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : BACKEND_URL;
+            
+            window.fetch = function(input, init) {
+                if (typeof input === 'string' && input.startsWith('/')) {
+                    if (window.location.origin !== BACKEND_URL) {
+                        input = API_BASE + input;
+                    }
+                }
+                init = init || {};
+                init.credentials = 'include';
+                return originalFetch(input, init);
+            };
+        })();
+    </script>
+</head>
+<body class="bg-slate-50 flex flex-col min-h-screen pb-10 text-slate-900 select-none">
+
+    <!-- Top Navbar -->
+    <nav class="bg-gradient-to-br from-brand-600 to-indigo-800 text-white sticky top-0 z-40 shadow-md px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <!-- Full Slotify Logo (Icon + Text) in white style -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 80" class="h-12 w-auto">
+                <g transform="translate(10, 10)">
+                    <rect x="12" y="16" width="36" height="24" rx="3" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round" fill="none" />
+                    <rect x="15.5" y="19.5" width="29" height="17" rx="1.5" fill="#FFFFFF" fill-opacity="0.1" />
+                    <path d="M 8 40 L 52 40 L 49 43.5 L 11 43.5 Z" fill="#FFFFFF" />
+                    <rect x="26" y="40" width="8" height="2" rx="0.5" fill="#2563EB" opacity="0.8" />
+                    <rect x="47" y="13" width="3" height="3" rx="0.5" fill="#00F0FF" opacity="0.95" />
+                    <rect x="52" y="8" width="2" height="2" fill="#00F0FF" opacity="0.8" />
+                    <rect x="44" y="7" width="2" height="2" fill="#FFFFFF" opacity="0.9" />
+                    <rect x="10" y="12" width="3" height="3" rx="0.5" fill="#FFFFFF" opacity="0.95" />
+                    <rect x="5" y="7" width="2" height="2" fill="#FFFFFF" opacity="0.8" />
+                    <rect x="12" y="6" width="2" height="2" fill="#00F0FF" opacity="0.9" />
+                    <rect x="28" y="10" width="3" height="3" rx="0.5" fill="#00F0FF" opacity="0.95" />
+                </g>
+                <text x="80" y="38" font-family="'Poppins', 'Inter', sans-serif" font-size="26" font-weight="800" fill="#FFFFFF" letter-spacing="-0.5">Slotify</text>
+                <text x="80" y="55" font-family="'Inter', sans-serif" font-size="9.5" font-weight="600" fill="#E2E8F0" letter-spacing="0.2">Administration Hub</text>
+            </svg>
+        </div>
+        <button onclick="logout()" class="btn-danger py-2.5 px-4 text-xs shadow-md">Logout</button>
+    </nav>
+
+    <!-- Main App shell -->
+    <div class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
+        
+        <!-- Desktop Sidebar Menu Navigation -->
+        <aside class="w-full md:w-64 flex-shrink-0 flex flex-col space-y-2.5">
+            <div class="bg-white rounded-3xl border border-slate-200/60 p-3 shadow-sm space-y-1">
+                <h3 class="text-[10px] font-extrabold text-slate-700 uppercase tracking-widest px-3.5 py-2.5">Workspace Navigation</h3>
+                
+                <button onclick="switchAdminTab('overview')" id="sidebar-overview" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition text-left active:scale-[0.99]">
+                    <span class="material-symbols-rounded text-slate-500">analytics</span>
+                    <span>Overview Stats</span>
+                </button>
+                
+                <button onclick="switchAdminTab('timetable')" id="sidebar-timetable" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition text-left active:scale-[0.99]">
+                    <span class="material-symbols-rounded text-slate-500">calendar_month</span>
+                    <span>Timetable & OCR</span>
+                </button>
+                
+                <button onclick="switchAdminTab('maintenance')" id="sidebar-maintenance" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition text-left active:scale-[0.99]">
+                    <span class="material-symbols-rounded text-slate-500">build</span>
+                    <span>Lab Maintenance</span>
+                </button>
+                
+                <button onclick="switchAdminTab('faculty')" id="sidebar-faculty" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition text-left active:scale-[0.99]">
+                    <span class="material-symbols-rounded text-slate-500">group</span>
+                    <span>Faculty Management</span>
+                </button>
+                
+                <button onclick="switchAdminTab('logs')" id="sidebar-logs" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition text-left active:scale-[0.99]">
+                    <span class="material-symbols-rounded text-slate-500">database</span>
+                    <span>System Database Logs</span>
+                </button>
+            </div>
+            
+            <a href="dashboard.html" class="flex items-center justify-center space-x-2 btn-primary py-3.5 text-xs shadow-md">
+                <span class="material-symbols-rounded text-white text-sm">dashboard</span>
+                <span>Open Faculty Dashboard</span>
+            </a>
+        </aside>
+
+        <!-- Main workspace section content -->
+        <div class="flex-1 min-w-0 space-y-6">
+            
+            <!-- SECTION 1: OVERVIEW STATS -->
+            <section id="section-overview" class="admin-section fade-in space-y-6 hidden">
+                <h2 class="text-2xl font-black text-slate-900">System Dashboard Overview</h2>
+                
+                <!-- Stats metrics grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div class="bg-white border-l-4 border-l-brand-600 rounded-3xl p-5 border border-slate-200/60 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-[10px] text-slate-700 font-extrabold uppercase tracking-wider">Total Bookings History</p>
+                            <h2 id="total-bookings" class="text-3xl font-black text-slate-900 mt-2">0</h2>
+                        </div>
+                        <div class="bg-brand-50 text-brand-600 p-3 rounded-2xl border border-brand-100 flex items-center justify-center">
+                            <span class="material-symbols-rounded text-2xl text-brand-600">fact_check</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white border-l-4 border-l-green-500 rounded-3xl p-5 border border-slate-200/60 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-[10px] text-slate-700 font-extrabold uppercase tracking-wider">Active Laboratories</p>
+                            <h2 id="active-labs" class="text-3xl font-black text-slate-900 mt-2">0</h2>
+                        </div>
+                        <div class="bg-green-50 text-green-600 p-3 rounded-2xl border border-green-100 flex items-center justify-center">
+                            <span class="material-symbols-rounded text-2xl text-green-600">memory</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border-l-4 border-l-yellow-500 rounded-3xl p-5 border border-slate-200/60 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-[10px] text-slate-700 font-extrabold uppercase tracking-wider">Faculty Roster accounts</p>
+                            <h2 id="faculty-users" class="text-3xl font-black text-slate-900 mt-2">0</h2>
+                        </div>
+                        <div class="bg-yellow-50 text-yellow-600 p-3 rounded-2xl border border-yellow-100 flex items-center justify-center">
+                            <span class="material-symbols-rounded text-2xl text-yellow-600">group</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Limit Cap controls widget -->
+                <div class="md3-card p-6">
+                    <div class="flex items-center space-x-3.5 mb-5">
+                        <div class="bg-slate-100 p-3 rounded-2xl text-slate-600 flex items-center justify-center">
+                            <span class="material-symbols-rounded text-2xl text-slate-600">security</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-900">Daily Booking Limit</h4>
+                            <p class="text-xs text-slate-600 mt-0.5">Control how many daily bookings a faculty user can claim. (0 = Unlimited)</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="number" id="limitInput" min="0" placeholder="E.g. 2" class="flex-1 px-4 py-3.5 rounded-2xl border border-slate-200 outline-none text-xs font-bold bg-slate-50/50 focus:bg-white md3-input">
+                        <button onclick="updateLimit()" class="btn-primary text-xs py-3.5 px-6 shadow-md shadow-brand-500/10">Update Limit</button>
+                    </div>
+                    <div id="limit-status" class="text-xs font-bold text-center mt-3 hidden p-2 bg-green-50 text-green-700 rounded-xl"></div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: TIMETABLE & OCR -->
+            <section id="section-timetable" class="admin-section fade-in space-y-6 hidden">
+                <h2 class="text-2xl font-black text-slate-900">Upload Department Timetable</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm space-y-4">
+                        <h4 class="font-bold text-slate-800 flex items-center">
+                            <span class="material-symbols-rounded text-indigo-600 mr-2" style="font-size: 20px;">info</span> Timetable Workflow
+                        </h4>
+                        <div class="flex items-center space-x-2.5 pb-2.5 border-b border-slate-100">
+                            <span class="text-xs font-bold text-slate-500">Formats:</span>
+                            <span class="bg-brand-50 text-brand-700 border border-brand-100 text-[10px] font-bold px-2 py-0.5 rounded-lg font-mono">PDF</span>
+                            <span class="bg-brand-50 text-brand-700 border border-brand-100 text-[10px] font-bold px-2 py-0.5 rounded-lg font-mono">CSV</span>
+                        </div>
+                        
+                        <ol class="list-decimal pl-4 text-xs text-slate-500 space-y-2 font-medium">
+                            <li>Upload department calendar schedule sheets.</li>
+                            <li>The OCR system extracts rooms, slots, and departments.</li>
+                            <li>Adjust and edit parsing results inside live preview table.</li>
+                            <li>Commit values directly to active schedules databases.</li>
+                        </ol>
+                    </div>
+
+                    <!-- File Dropzone -->
+                    <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-slate-800 mb-4 flex items-center">
+                                <span class="material-symbols-rounded text-brand-600 mr-2" style="font-size: 20px;">upload</span> File Selection
+                            </h4>
+                            <input type="file" id="csv-file" accept=".csv,.pdf" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-2xl file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer outline-none border border-slate-200 rounded-2xl p-1.5 bg-slate-50/50">
+                        </div>
+                        
+                        <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                            <button onclick="uploadCSV()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-green-500/10 active:scale-95 text-xs flex items-center justify-center space-x-2">
+                                <span class="material-symbols-rounded text-sm">upload_file</span> <span>Upload Timetable</span>
+                            </button>
+                            <button onclick="clearTimetable()" class="flex-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold py-3.5 rounded-2xl transition active:scale-95 text-xs flex items-center justify-center space-x-2">
+                                <span class="material-symbols-rounded text-sm">delete</span> <span>Delete All Schedule</span>
+                            </button>
+                        </div>
+                        <div id="upload-status" class="mt-3 text-xs font-bold text-center text-slate-500"></div>
+                    </div>
+                </div>
+
+                <!-- Timetable preview box -->
+                <div id="timetable-preview-container" class="hidden bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between pb-3.5 border-b border-slate-100">
+                        <div class="flex items-center space-x-2.5">
+                            <span class="material-symbols-rounded text-brand-600 mr-2" style="font-size: 20px;">visibility</span>
+                            <h4 class="font-bold text-slate-800 font-mono text-sm">Timetable Extraction Preview</h4>
+                        </div>
+                        <button onclick="addNewPreviewRow()" class="bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-100 text-xs font-bold py-2 px-3.5 rounded-xl transition active:scale-95 flex items-center space-x-1">
+                            <span class="material-symbols-rounded text-sm">add</span> <span>Add Entry</span>
+                        </button>
+                    </div>
+
+                    <div class="table-wrapper max-h-[400px] overflow-y-auto">
+                        <table class="md3-table text-xs">
+                            <thead>
+                                <tr>
+                                    <th>Class</th>
+                                    <th>Day</th>
+                                    <th>Period(s)</th>
+                                    <th>Subject</th>
+                                    <th>Physical Lab</th>
+                                    <th class="text-center">Confidence</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview-table-body" class="divide-y divide-slate-100 font-semibold text-slate-805">
+                                <!-- OCR slots -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex space-x-3 justify-end pt-3">
+                        <button onclick="saveExtractedTimetable()" class="btn-primary bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-5 text-xs shadow-md shadow-green-500/10">Save to Database</button>
+                        <button onclick="cancelPreview()" class="btn-secondary py-2.5 px-5 text-xs">Cancel</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: LAB MAINTENANCE -->
+            <section id="section-maintenance" class="admin-section fade-in space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-black text-slate-900">Laboratory Operations & Maintenance</h2>
+                    <button onclick="fetchLabsList()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2 px-4 rounded-xl transition active:scale-95 text-xs shadow-sm flex items-center space-x-1">
+                        <span class="material-symbols-rounded text-sm">sync</span> <span>Sync Labs</span>
+                    </button>
+                </div>
+
+                <div class="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                        <h4 class="font-bold text-slate-800 flex items-center">
+                            <span class="material-symbols-rounded text-brand-600 mr-2" style="font-size: 20px;">build</span> Laboratories Status
+                        </h4>
+                        <!-- Add Lab Button Redirect link -->
+                        <a href="add_lab.html" class="bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-100 text-xs font-bold py-2.5 px-4 rounded-xl transition active:scale-95 flex items-center">
+                            <span class="material-symbols-rounded text-sm mr-1">add</span> Add Laboratory
+                        </a>
+                    </div>
+                    <div id="labs-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="col-span-full text-center py-6 text-slate-400 font-bold animate-pulse text-sm">Querying active labs...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: FACULTY PANEL -->
+            <section id="section-faculty" class="admin-section fade-in space-y-6 hidden">
+                <h2 class="text-2xl font-black text-slate-900">Faculty Accounts Manager</h2>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Faculty Bulk CSV Upload -->
+                    <div class="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-sm space-y-4">
+                        <h4 class="font-bold text-slate-800 flex items-center">
+                            <span class="material-symbols-rounded text-brand-600 mr-2" style="font-size: 20px;">person_add</span> Upload Faculty CSV
+                        </h4>
+                        
+                        <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs text-slate-500 space-y-2 font-medium">
+                            <p class="font-bold text-slate-700">Format:</p>
+                            <code class="block bg-slate-200/80 px-2 py-1 rounded font-mono text-[10px]">name,email,password</code>
+                            <p class="font-bold text-slate-700 mt-2">Example:</p>
+                            <code class="block bg-slate-200/80 px-2 py-1 rounded font-mono text-[10px]">John Doe,john@test.edu,pass123</code>
+                        </div>
+
+                        <input type="file" id="facultyFile" accept=".csv" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer outline-none border border-slate-200 rounded-xl p-1.5">
+                        
+                        <button onclick="uploadFaculty()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-brand-500/10 active:scale-95 text-xs flex items-center justify-center space-x-2">
+                            <span class="material-symbols-rounded text-sm">upload</span> <span>Upload Faculty</span>
+                        </button>
+                        <div id="upload-faculty-status" class="text-[10px] font-bold text-center text-slate-500 mt-2"></div>
+                    </div>
+
+                    <!-- Faculty roster list -->
+                    <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-800 flex items-center">
+                                <span class="material-symbols-rounded text-brand-600 mr-2" style="font-size: 20px;">group</span> Registered Faculty
+                            </h4>
+                            <button onclick="fetchFacultyList()" class="text-xs font-bold text-brand-600 hover:underline">Refresh</button>
+                        </div>
+                        
+                        <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-inner max-h-[300px] overflow-y-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-100 text-slate-600 font-extrabold uppercase tracking-wider">
+                                        <th class="p-3">Name</th>
+                                        <th class="p-3">Email</th>
+                                        <th class="p-3">Role</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="faculty-list-body" class="divide-y divide-slate-100 font-semibold text-slate-700">
+                                    <!-- Faculty profiles dynamic list -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 5: SYSTEM DATABASE LOGS -->
+            <section id="section-logs" class="admin-section fade-in space-y-6 hidden">
+                <h2 class="text-2xl font-black text-slate-900">System Database Logs</h2>
+
+                <div class="grid grid-cols-1 gap-6">
+                    <!-- Reservation logs table -->
+                    <div class="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-800 flex items-center">
+                                <span class="material-symbols-rounded text-brand-600 mr-2" style="font-size: 20px;">history</span> Booking History
+                            </h4>
+                            <button onclick="fetchBookingHistory()" class="text-xs font-bold text-brand-600 hover:underline">Refresh</button>
+                        </div>
+                        <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-inner max-h-[350px] overflow-y-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-100 text-slate-600 font-extrabold uppercase tracking-wider">
+                                        <th class="p-3">Laboratory</th>
+                                        <th class="p-3">Faculty</th>
+                                        <th class="p-3">Date</th>
+                                        <th class="p-3">Day</th>
+                                        <th class="p-3">Period</th>
+                                        <th class="p-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="booking-history-body" class="divide-y divide-slate-100 font-semibold text-slate-700">
+                                    <!-- Booking rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Dispatch notification logs table -->
+                    <div class="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-800 flex items-center">
+                                <span class="material-symbols-rounded text-brand-600 mr-2" style="font-size: 20px;">notifications</span> Notification History
+                            </h4>
+                            <button onclick="fetchNotificationHistory()" class="text-xs font-bold text-brand-600 hover:underline">Refresh</button>
+                        </div>
+                        <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-inner max-h-[350px] overflow-y-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-100 text-slate-600 font-extrabold uppercase tracking-wider">
+                                        <th class="p-3">Created At</th>
+                                        <th class="p-3">Type</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Created By</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="notification-history-body" class="divide-y divide-slate-100 font-semibold text-slate-700">
+                                    <!-- Notification logs -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- DIALOGS AND OVERLAYS -->
+
+    <!-- Lab maintenance modal overlay -->
+    <div id="maintenance-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 fade-in m-4">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-red-100 flex items-center justify-center">
+                    <span class="material-symbols-rounded text-red-600" style="font-size: 28px;">build</span>
+                </div>
+                <h3 class="text-xl font-extrabold text-slate-900">Initiate Maintenance Mode</h3>
+                <p id="m-modal-lab-name" class="text-xs text-slate-500 mt-1 font-semibold">Laboratory name info</p>
+            </div>
+
+            <input type="hidden" id="m-modal-lab-id">
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Reason</label>
+                    <input type="text" id="m-reason" placeholder="E.g., Hardware upgrade / Floor painting" required class="w-full px-4 py-3.5 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 outline-none text-sm text-slate-900 font-medium md3-input bg-slate-50/50 focus:bg-white">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Maintenance Dates</label>
+                    <div class="flex gap-2 mb-2">
+                        <input type="date" id="m-date-picker" class="flex-1 px-4 py-3.5 rounded-2xl border border-slate-200 outline-none text-xs font-semibold bg-slate-50/50 focus:bg-white md3-input">
+                        <button type="button" onclick="addMaintenanceDate()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2.5 rounded-2xl active:scale-[0.98] transition text-xs flex items-center justify-center">Add</button>
+                    </div>
+                    <div id="m-dates-container" class="flex flex-wrap gap-1.5 min-h-[42px] p-2.5 border border-slate-200 bg-slate-50/30 rounded-2xl">
+                        <!-- Tags injected dynamically -->
+                    </div>
+                    <input type="hidden" id="m-expected-end" required>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button onclick="submitMaintenance()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-2xl active:scale-[0.98] transition text-sm">Lock Space</button>
+                <button onclick="closeMaintenanceModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3.5 rounded-2xl active:scale-[0.98] transition text-sm">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spinner loading indicator block -->
+    <div id="spinner-loader" class="hidden fixed inset-0 z-[999] flex items-center justify-center bg-slate-900/40 backdrop-blur-[2px]">
+        <div class="bg-white p-5 rounded-3xl shadow-2xl flex flex-col items-center justify-center space-y-3.5 border border-slate-100 max-w-[200px] w-full">
+            <div class="w-9 h-9 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div>
+            <p class="text-xs text-slate-400 font-bold">Locking database records...</p>
+        </div>
+    </div>
+
+    <script>
+        let currentAdminTab = 'overview';
+        let extractedRecords = [];
+
+        // Tab switches
+        function switchAdminTab(tabName) {
+            currentAdminTab = tabName;
+            
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('[id^="sidebar-"]').forEach(btn => {
+                btn.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-500 hover:bg-slate-50 transition text-left active:scale-[0.99]";
+            });
+
+            const activeSection = document.getElementById(`section-${tabName}`);
+            if (activeSection) activeSection.classList.remove('hidden');
+
+            const activeBtn = document.getElementById(`sidebar-${tabName}`);
+            if (activeBtn) {
+                activeBtn.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-black text-brand-600 bg-brand-50 border border-brand-100 transition text-left active:scale-[0.99]";
+            }
+
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        function showSpinner(show) {
+            const loader = document.getElementById('spinner-loader');
+            if (loader) {
+                if (show) loader.classList.remove('hidden');
+                else loader.classList.add('hidden');
+            }
+        }
+
+        function showToast(msg, type = 'success') {
+            alert((type === 'success' ? '✅ ' : '❌ ') + msg);
+        }
+
+        async function safeFetch(path, options = {}) {
+            try {
+                const res = await fetch(path, options);
+                if (!res.ok) return null;
+                const text = await res.text();
+                try {
+                    return text ? JSON.parse(text) : null;
+                } catch (e) {
+                    return null;
+                }
+            } catch (err) {
+                return null;
+            }
+        }
+
+        async function fetchStats() {
+            try {
+                const data = await safeFetch('/api/stats');
+                if (data) {
+                    document.getElementById('total-bookings').innerText = data.totalBookings || '0';
+                    document.getElementById('active-labs').innerText = data.activeLabs || '0';
+                    document.getElementById('faculty-users').innerText = data.totalFaculty || '0';
+                }
+            } catch(e) {}
+        }
+
+        async function fetchLimit() {
+            try {
+                const data = await safeFetch('/get_limit');
+                if (data && data.limit !== undefined) {
+                    document.getElementById('limitInput').value = data.limit;
+                }
+            } catch(e) {}
+        }
+
+        async function updateLimit() {
+            const val = document.getElementById('limitInput').value;
+            const status = document.getElementById('limit-status');
+            try {
+                const res = await fetch('/update_limit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({limit: parseInt(val)})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    status.innerText = `Limit set to ${data.limit} bookings per faculty per day.`;
+                    status.classList.remove('hidden');
+                    setTimeout(() => status.classList.add('hidden'), 3000);
+                }
+            } catch(e) {}
+        }
+
+        async function uploadCSV() {
+            const fileInput = document.getElementById('csv-file');
+            const status = document.getElementById('upload-status');
+            if (fileInput.files.length === 0) return alert("Please select a file to parse.");
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            status.innerText = "Parsing timetable...";
+            showSpinner(true);
+
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                showSpinner(false);
+
+                if (data.success && data.records) {
+                    status.innerText = "File parsed successfully!";
+                    extractedRecords = data.records;
+                    renderExtractionPreview();
+                } else {
+                    status.innerText = "Parsing failed: " + (data.message || "Invalid file format");
+                }
+            } catch(e) {
+                showSpinner(false);
+                status.innerText = "Connection error.";
+            }
+        }
+
+        async function clearTimetable() {
+            if(!confirm("Delete all timetable schedules from the system?")) return;
+            showSpinner(true);
+            try {
+                const res = await fetch('/clear_timetable', { method: 'POST' });
+                const data = await res.json();
+                showSpinner(false);
+                if (data.success) {
+                    showToast("Database timetable schedules deleted.", "success");
+                }
+            } catch(e) {
+                showSpinner(false);
+            }
+        }
+
+        function renderExtractionPreview() {
+            const tbody = document.getElementById('preview-table-body');
+            const container = document.getElementById('timetable-preview-container');
+            if(!tbody || !container) return;
+
+            tbody.innerHTML = '';
+            
+            if(extractedRecords.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+
+            extractedRecords.forEach((rec, idx) => {
+                const confidence = rec.confidence !== undefined ? rec.confidence : 100;
+                const isLowConfidence = confidence < 75;
+                const alertStyle = isLowConfidence ? 'bg-red-50 text-red-700 border-l-4 border-l-red-500 animate-pulse' : 'hover:bg-slate-50/50';
+                const confidenceBadge = isLowConfidence 
+                    ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-black font-mono text-[10px] flex items-center justify-center space-x-0.5">⚠️ <span>${confidence}%</span></span>` 
+                    : `<span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold font-mono text-[10px]">${confidence}%</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = `${alertStyle} transition border-b border-slate-100`;
+                tr.innerHTML = `
+                    <td class="p-2"><input type="text" value="${rec.class || 'Imported'}" onchange="updateRecordField(${idx}, 'class', this.value)" class="bg-white border border-slate-200 rounded p-1 w-full text-xs font-semibold outline-none focus:border-brand-500"></td>
+                    <td class="p-2"><input type="text" value="${rec.day || 'Monday'}" onchange="updateRecordField(${idx}, 'day', this.value)" class="bg-white border border-slate-200 rounded p-1 w-full text-xs font-semibold outline-none focus:border-brand-500"></td>
+                    <td class="p-2"><input type="text" value="${rec.periods ? rec.periods.join(',') : '1'}" onchange="updateRecordPeriods(${idx}, this.value)" class="bg-white border border-slate-200 rounded p-1 w-full text-xs font-semibold outline-none focus:border-brand-500"></td>
+                    <td class="p-2"><input type="text" value="${rec.subject || ''}" onchange="updateRecordField(${idx}, 'subject', this.value)" class="bg-white border border-slate-200 rounded p-1 w-full text-xs font-semibold outline-none focus:border-brand-500"></td>
+                    <td class="p-2"><input type="text" value="${rec.lab || ''}" onchange="updateRecordField(${idx}, 'lab', this.value)" class="bg-white border border-slate-200 rounded p-1 w-full text-xs font-semibold outline-none focus:border-brand-500"></td>
+                    <td class="p-2 text-center">${confidenceBadge}</td>
+                    <td class="p-2 text-center">
+                        <button onclick="removePreviewRow(${idx})" class="p-1 text-red-600 hover:bg-red-50 rounded-lg active:scale-95 transition flex items-center justify-center mx-auto" title="Delete Row">
+                            <span class="material-symbols-rounded text-sm">delete</span>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        function updateRecordField(idx, field, val) {
+            if(extractedRecords[idx]) extractedRecords[idx][field] = val;
+        }
+
+        function updateRecordPeriods(idx, val) {
+            if(extractedRecords[idx]) {
+                extractedRecords[idx]['periods'] = val.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+            }
+        }
+
+        function removePreviewRow(idx) {
+            extractedRecords.splice(idx, 1);
+            renderExtractionPreview();
+        }
+
+        function addNewPreviewRow() {
+            extractedRecords.push({
+                class: "CSE",
+                day: "Monday",
+                periods: [1],
+                subject: "New Subject",
+                lab: "Lab 5",
+                confidence: 100
+            });
+            renderExtractionPreview();
+        }
+
+        function cancelPreview() {
+            extractedRecords = [];
+            renderExtractionPreview();
+        }
+
+        async function saveExtractedTimetable() {
+            showSpinner(true);
+            try {
+                const res = await fetch('/api/save_timetable', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ records: extractedRecords })
+                });
+                const data = await res.json();
+                showSpinner(false);
+                if (data.success) {
+                    showToast("Timetable schedules saved successfully.", "success");
+                    cancelPreview();
+                } else {
+                    showToast("Save failed: " + (data.message || "Unknown error"), "error");
+                }
+            } catch(e) {
+                showSpinner(false);
+                showToast("Connection error.", "error");
+            }
+        }
+
+        async function fetchLabsList() {
+            const container = document.getElementById('labs-list-container');
+            if(!container) return;
+            try {
+                const res = await fetch('/labs');
+                const list = await res.json();
+                
+                if (list.length === 0) {
+                    container.innerHTML = '<p class="text-xs text-slate-400 text-center py-6 col-span-full">No laboratories currently configured.</p>';
+                    return;
+                }
+
+                let html = '';
+                list.forEach(lab => {
+                    const isMaint = lab.status === 'maintenance';
+                    const bgClass = isMaint ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-200/60';
+                    const badgeClass = isMaint ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-800';
+                    
+                    let maintInfoHtml = '';
+                    if (isMaint) {
+                        const reason = lab.maintenance_reason || 'Scheduled downtime';
+                        const end = lab.maintenance_end ? lab.maintenance_end.split(' ')[0] : 'TBD';
+                        maintInfoHtml = `
+                            <div class="mt-2.5 p-3 bg-white border border-red-200/50 rounded-2xl text-[10px] space-y-1 text-red-700">
+                                <p><strong>Reason:</strong> ${reason}</p>
+                                <p><strong>Expected completion:</strong> <span class="font-mono">${end}</span></p>
+                            </div>
+                        `;
+                    }
+
+                    const actionBtn = isMaint 
+                        ? `<button onclick="setActiveStatus(${lab.id})" class="text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-xl shadow-sm transition active:scale-95">Restore</button>`
+                        : `<button onclick="openMaintenanceModal(${lab.id}, '${lab.lab_name}')" class="text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl transition active:scale-95">Put Under Maintenance</button>`;
+
+                    html += `
+                        <div class="p-4 rounded-3xl border shadow-sm flex flex-col justify-between ${bgClass}">
+                            <div class="flex justify-between items-center w-full mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <span class="material-symbols-rounded text-slate-500 text-sm">computer</span>
+                                    <h4 class="text-sm font-bold text-slate-800">${lab.lab_name}</h4>
+                                </div>
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${badgeClass}">${lab.status || 'Active'}</span>
+                            </div>
+                            
+                            ${maintInfoHtml}
+                            
+                            <div class="mt-4 flex justify-end space-x-2">
+                                <button onclick="deleteLab(${lab.id})" class="text-xs font-bold text-red-600 hover:bg-red-50 border border-red-100 px-3.5 py-1.5 rounded-xl transition active:scale-95" title="Delete Lab">Delete</button>
+                                ${actionBtn}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+
+            } catch(e) {
+                container.innerHTML = '<p class="text-xs text-red-500 text-center py-6 col-span-full">Database connection error</p>';
+            }
+        }
+
+        async function deleteLab(labId) {
+            if(!confirm("Are you sure you want to delete this laboratory?")) return;
+            showSpinner(true);
+            try {
+                const res = await fetch("/delete_lab", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({ id: labId })
+                });
+                const data = await res.json();
+                showSpinner(false);
+                if (data.success) {
+                    showToast("Laboratory space deleted.", "success");
+                    fetchLabsList();
+                    fetchStats();
+                } else {
+                    showToast(data.message || "Failed to delete lab", "error");
+                }
+            } catch(e) {
+                showSpinner(false);
+            }
+        }
+
+        let selectedMaintenanceDates = [];
+
+        function openMaintenanceModal(labId, labName) {
+            document.getElementById('m-modal-lab-id').value = labId;
+            document.getElementById('m-modal-lab-name').innerText = `Laboratory: ${labName}`;
+            document.getElementById('m-reason').value = '';
+            
+            selectedMaintenanceDates = [];
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = tomorrow.toISOString().split('T')[0];
+            selectedMaintenanceDates.push(tomorrowStr);
+            renderMaintenanceDates();
+            
+            document.getElementById('maintenance-modal').classList.remove('hidden');
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        function addMaintenanceDate() {
+            const picker = document.getElementById('m-date-picker');
+            const dateVal = picker.value;
+            if (!dateVal) return;
+            if (selectedMaintenanceDates.includes(dateVal)) return;
+            selectedMaintenanceDates.push(dateVal);
+            selectedMaintenanceDates.sort();
+            renderMaintenanceDates();
+            picker.value = '';
+        }
+
+        function removeMaintenanceDate(dateVal) {
+            selectedMaintenanceDates = selectedMaintenanceDates.filter(d => d !== dateVal);
+            renderMaintenanceDates();
+        }
+
+        function renderMaintenanceDates() {
+            const container = document.getElementById('m-dates-container');
+            const hiddenInput = document.getElementById('m-expected-end');
+            container.innerHTML = '';
+            
+            if (selectedMaintenanceDates.length === 0) {
+                container.innerHTML = '<span class="text-[10px] text-slate-400 font-bold self-center">No dates selected. Please add one.</span>';
+                hiddenInput.value = '';
+                return;
+            }
+            
+            selectedMaintenanceDates.forEach(d => {
+                const displayDate = d.split('-').reverse().join('-');
+                const tag = document.createElement('span');
+                tag.className = 'inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100';
+                tag.innerHTML = `
+                    <span>${displayDate}</span>
+                    <button type="button" onclick="removeMaintenanceDate('${d}')" class="text-indigo-500 hover:text-indigo-700 ml-1 font-extrabold focus:outline-none">✕</button>
+                `;
+                container.appendChild(tag);
+            });
+            
+            hiddenInput.value = selectedMaintenanceDates.join(',');
+        }
+
+        function closeMaintenanceModal() {
+            document.getElementById('maintenance-modal').classList.add('hidden');
+        }
+
+        async function submitMaintenance() {
+            const labId = document.getElementById('m-modal-lab-id').value;
+            const reason = document.getElementById('m-reason').value.trim();
+            const expectedEnd = document.getElementById('m-expected-end').value;
+            
+            if (!reason) return alert("Please specify a maintenance reason.");
+            if (!expectedEnd) return alert("Please specify expected completion date.");
+            
+            closeMaintenanceModal();
+            showSpinner(true);
+            
+            try {
+                const res = await fetch(`/api/labs/${labId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'maintenance',
+                        reason: reason,
+                        expected_end: expectedEnd
+                    })
+                });
+                
+                const data = await res.json();
+                showSpinner(false);
+                
+                if (data.success) {
+                    showToast(data.message || "Lab put under maintenance.", "success");
+                    fetchLabsList();
+                    fetchStats();
+                    fetchNotificationHistory();
+                } else {
+                    showToast(data.message || "Failed to update lab status.", "error");
+                }
+            } catch (err) {
+                showSpinner(false);
+                showToast("Server error during update.", "error");
+            }
+        }
+
+        async function setActiveStatus(labId) {
+            showSpinner(true);
+            try {
+                const res = await fetch(`/api/labs/${labId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'active' })
+                });
+                
+                const data = await res.json();
+                showSpinner(false);
+                
+                if (data.success) {
+                    showToast(data.message || "Lab is now active.", "success");
+                    fetchLabsList();
+                    fetchStats();
+                    fetchNotificationHistory();
+                } else {
+                    showToast(data.message || "Failed to update lab status.", "error");
+                }
+            } catch (err) {
+                showSpinner(false);
+                showToast("Server error during update.", "error");
+            }
+        }
+
+        async function uploadFaculty() {
+            const fileInput = document.getElementById('facultyFile');
+            const status = document.getElementById('upload-faculty-status');
+            if (fileInput.files.length === 0) return alert("Select a CSV file first.");
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            status.innerText = "Uploading faculty CSV...";
+            showSpinner(true);
+
+            try {
+                const res = await fetch('/upload_faculty', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                showSpinner(false);
+
+                if (data.success) {
+                    status.innerText = `Uploaded successfully! Loaded ${data.count} new faculty.`;
+                    fetchFacultyList();
+                    fetchStats();
+                } else {
+                    status.innerText = "Error: " + (data.error || "Upload failed");
+                }
+            } catch(e) {
+                showSpinner(false);
+                status.innerText = "Connection error.";
+            }
+        }
+
+        async function fetchFacultyList() {
+            const tbody = document.getElementById('faculty-list-body');
+            if(!tbody) return;
+            try {
+                const res = await fetch('/api/faculty');
+                const data = await res.json();
+                if (data.success && data.faculty) {
+                    if (data.faculty.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="3" class="text-xs text-slate-400 text-center py-4">No registered faculty.</td></tr>';
+                        return;
+                    }
+                    let html = '';
+                    data.faculty.forEach(f => {
+                        html += `
+                            <tr class="hover:bg-slate-50 border-b border-slate-100">
+                                <td class="p-3 font-bold text-slate-800">${f.name}</td>
+                                <td class="p-3 font-mono text-slate-500">${f.email}</td>
+                                <td class="p-3"><span class="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">${f.role}</span></td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                }
+            } catch(e) {}
+        }
+
+        async function fetchBookingHistory() {
+            const tbody = document.getElementById('booking-history-body');
+            if(!tbody) return;
+            try {
+                const res = await fetch('/api/booking_history');
+                const data = await res.json();
+                if (data.success) {
+                    if (data.bookings.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-xs text-slate-400 text-center py-4 font-bold">No bookings in history.</td></tr>';
+                        return;
+                    }
+                    let html = '';
+                    data.bookings.forEach(b => {
+                        const statusColor = b.status === 'Active' ? 'text-green-600 bg-green-50 border border-green-100' : 'text-slate-500 bg-slate-50 border border-slate-200/50';
+                        html += `
+                        <tr class="hover:bg-slate-50 border-b border-slate-100">
+                            <td class="p-3 font-bold text-slate-800">${b.lab_name}</td>
+                            <td class="p-3 text-slate-600 font-semibold">${b.faculty_name}</td>
+                            <td class="p-3 text-slate-600 font-mono">${b.booking_date}</td>
+                            <td class="p-3 text-slate-500 font-medium">${b.day}</td>
+                            <td class="p-3 text-slate-600 font-mono">Period ${b.period}</td>
+                            <td class="p-3">
+                                <span class="px-2.5 py-0.5 rounded-full border text-[10px] font-bold ${statusColor}">${b.status}</span>
+                            </td>
+                        </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-xs text-red-500 text-center py-4">Failed to load booking history.</td></tr>';
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-xs text-red-500 text-center py-4">Error loading booking history.</td></tr>';
+            }
+        }
+
+        async function fetchNotificationHistory() {
+            const tbody = document.getElementById('notification-history-body');
+            if(!tbody) return;
+            try {
+                const res = await fetch('/api/notification_history');
+                const data = await res.json();
+                if (data.success) {
+                    if (data.notifications.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-xs text-slate-400 text-center py-4 font-bold">No notifications logged.</td></tr>';
+                        return;
+                    }
+                    let html = '';
+                    data.notifications.forEach(n => {
+                        let typeColor = 'text-slate-600 bg-slate-50 border border-slate-200/50';
+                        if (n.notification_type === 'maintenance_start') typeColor = 'text-red-700 bg-red-50 border border-red-100';
+                        if (n.notification_type === 'maintenance_end') typeColor = 'text-green-700 bg-green-50 border border-green-100';
+                        
+                        html += `
+                        <tr class="hover:bg-slate-50 border-b border-slate-100">
+                            <td class="p-3 text-slate-400 font-semibold font-mono text-[10px] whitespace-nowrap">${n.created_at}</td>
+                            <td class="p-3">
+                                <span class="px-2 py-0.5 rounded-lg text-[10px] uppercase font-bold border ${typeColor}">${n.notification_type.replace('_', ' ')}</span>
+                            </td>
+                            <td class="p-3">
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-black text-green-800 bg-green-100 border border-green-200">${n.status || 'Sent'}</span>
+                            </td>
+                            <td class="p-3 text-slate-800 font-bold">${n.created_by_name || 'System'}</td>
+                        </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-xs text-red-500 text-center py-4">Failed to load notification history.</td></tr>';
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-xs text-red-500 text-center py-4">Error loading notification history.</td></tr>';
+            }
+        }
+
+        async function checkAdmin() {
+            try {
+                const user = await safeFetch("/current_user");
+                if (!user || user.role !== 'admin') {
+                    window.location.href = 'index.html';
+                }
+            } catch(e) {
+                window.location.href = 'index.html';
+            }
+        }
+
+        async function logout() {
+            await safeFetch('/api/logout');
+            window.location.href = 'index.html';
+        }
+
+        checkAdmin().then(() => {
+            fetchStats();
+            fetchLimit();
+            fetchFacultyList();
+            fetchLabsList();
+            fetchBookingHistory();
+            fetchNotificationHistory();
+            switchAdminTab('overview');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Add Lab - Slotify</title>
+    <!-- Preconnect for faster font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@0.525.0/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/api-config.js"></script>
+    <script>
+
+        (function() {
+            const originalFetch = window.fetch;
+            const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : BACKEND_URL;
+            
+            window.fetch = function(input, init) {
+                if (typeof input === 'string' && input.startsWith('/')) {
+                    if (window.location.origin !== BACKEND_URL) {
+                        input = API_BASE + input;
+                    }
+                }
+                init = init || {};
+                init.credentials = 'include';
+                return originalFetch(input, init);
+            };
+        })();
+    </script>
+</head>
+<body class="bg-slate-50 flex flex-col min-h-screen text-slate-900 select-none pb-10">
+
+    <!-- Top Navbar -->
+    <nav class="bg-gradient-to-br from-brand-600 to-indigo-800 text-white sticky top-0 z-40 shadow-md px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <button onclick="window.history.back()" class="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition active:scale-95 flex items-center justify-center">
+                <span class="material-symbols-rounded text-white text-sm">arrow_back</span>
+            </button>
+            <h1 class="font-extrabold text-lg tracking-tight">Add Laboratory</h1>
+        </div>
+        <div class="bg-white/10 p-2 rounded-xl text-white flex items-center justify-center">
+            <span class="material-symbols-rounded text-white text-sm">add</span>
+        </div>
+    </nav>
+
+    <main class="flex-1 px-4 py-8 w-full max-w-md mx-auto space-y-6">
+        <div class="md3-card p-6">
+            <h3 class="text-lg font-extrabold text-slate-900 mb-2">Space Details</h3>
+            <p class="text-xs text-slate-600 mb-6">Create a new laboratory room or conference hall in the system.</p>
+
+            <div id="status" class="hidden mb-5 p-4 rounded-2xl text-xs font-bold text-center slide-down"></div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Lab / Space Name</label>
+                    <input type="text" id="lab-name" placeholder="E.g. Computer Lab 8" class="w-full px-4 py-3.5 outline-none transition bg-slate-50/50 focus:bg-white text-sm text-slate-900 font-semibold md3-input">
+                </div>
+                
+                <button onclick="addLab()" class="w-full btn-primary py-4 text-sm ripple">
+                    Create Space
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+
+        async function addLab() {
+            const name = document.getElementById('lab-name').value;
+            const status = document.getElementById('status');
+            if (!name) return alert('Enter a name');
+
+            try {
+                const res = await fetch('/api/labs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                
+                status.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-green-50', 'text-green-700');
+                if (data.success) {
+                    status.innerText = "✅ Lab added successfully";
+                    status.classList.add('bg-green-50', 'text-green-700', 'border', 'border-green-100');
+                    document.getElementById('lab-name').value = '';
+                } else {
+                    status.innerText = "❌ Error: " + data.message;
+                    status.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-100');
+                }
+                status.classList.remove('hidden');
+            } catch(e) {
+                status.innerText = "❌ Server Error";
+                status.classList.remove('hidden');
+                status.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-100');
+            }
+        }
+    </script>
+</body>
+</html>

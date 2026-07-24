@@ -1,0 +1,40 @@
+node_modules/
+.expo/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Expo
+packager-info.json
+settings.json
+history.json
+manifest.json
+
+# Native
+android/
+ios/
+
+# Python
+*.pyc
+__pycache__/
+
+# Firebase
+.firebase
+
+# OS
+.DS_Store
+
+# Environments
+.env
+*.env
+
+# Secrets & Keys
+firebase_key.json
+*key.json
+*.json.key
+
+# Timetable outputs and logs
+*.pdf
+*.log
+*.txt

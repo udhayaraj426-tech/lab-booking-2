@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Dashboard - Slotify</title>
+    <!-- Preconnect for faster font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@0.525.0/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/api-config.js"></script>
+    <script>
+        (function() {
+            const originalFetch = window.fetch;
+            const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : BACKEND_URL;
+            
+            window.fetch = function(input, init) {
+                if (typeof input === 'string' && input.startsWith('/')) {
+                    if (window.location.origin !== BACKEND_URL) {
+                        input = API_BASE + input;
+                    }
+                }
+                init = init || {};
+                init.credentials = 'include';
+                return originalFetch(input, init);
+            };
+        })();
+    </script>
+</head>
+<body class="bg-slate-50 flex flex-col min-h-screen text-slate-900 pb-20 select-none safe-area-bottom">
+
+    <!-- Notification Permission Box -->
+    <div id="notif-permission-box" class="hidden fixed top-4 left-4 right-4 bg-brand-600 text-white p-4 z-[999] rounded-2xl shadow-xl flex justify-between items-center slide-down border border-brand-500/30 backdrop-blur-md">
+        <div class="flex items-center space-x-3">
+            <div class="bg-white/20 p-2 rounded-xl">
+                <span class="material-symbols-rounded text-white" style="font-size: 24px;">notifications</span>
+            </div>
+            <div>
+                <p class="font-bold text-sm">Allow Notifications?</p>
+                <p class="text-xs text-blue-100 font-medium">Get instant alerts for real-time bookings.</p>
+            </div>
+        </div>
+        <div class="flex space-x-2">
+            <button onclick="requestNotificationPermission()" class="bg-white text-brand-600 text-xs px-3.5 py-2 rounded-xl font-bold shadow-sm active:scale-95 transition">Allow</button>
+            <button onclick="dismissNotifBox()" class="text-blue-100 text-xs px-3 py-2 hover:text-white transition">Later</button>
+        </div>
+    </div>
+
+    <!-- Layout Wrapper -->
+    <div class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto relative md:px-4 lg:px-8 py-0 md:py-6">
+        
+        <!-- Desktop Sidebar -->
+        <aside class="hidden md:flex flex-col w-64 bg-white border border-slate-200/60 rounded-3xl p-4 min-h-[calc(100vh-3rem)] sticky top-6 z-30 shadow-sm justify-between">
+            <div class="space-y-6">
+                <!-- Sidebar Slotify Logo -->
+                <div class="py-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 80" class="h-12 w-auto">
+                        <defs>
+                            <linearGradient id="slotifyGradSidebar" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#2563EB" />
+                                <stop offset="100%" stop-color="#06B6D4" />
+                            </linearGradient>
+                        </defs>
+                        <g transform="translate(10, 10)">
+                            <rect x="12" y="16" width="36" height="24" rx="3" stroke="url(#slotifyGradSidebar)" stroke-width="3" stroke-linejoin="round" fill="none" />
+                            <rect x="15.5" y="19.5" width="29" height="17" rx="1.5" fill="url(#slotifyGradSidebar)" fill-opacity="0.1" />
+                            <path d="M 8 40 L 52 40 L 49 43.5 L 11 43.5 Z" fill="url(#slotifyGradSidebar)" />
+                            <rect x="26" y="40" width="8" height="2" rx="0.5" fill="#FFFFFF" opacity="0.8" />
+                            <rect x="47" y="13" width="3" height="3" rx="0.5" fill="#06B6D4" opacity="0.9" />
+                            <rect x="52" y="8" width="2" height="2" fill="#06B6D4" opacity="0.6" />
+                            <rect x="44" y="7" width="2" height="2" fill="#2563EB" opacity="0.8" />
+                            <rect x="10" y="12" width="3" height="3" rx="0.5" fill="#2563EB" opacity="0.9" />
+                            <rect x="5" y="7" width="2" height="2" fill="#2563EB" opacity="0.6" />
+                            <rect x="12" y="6" width="2" height="2" fill="#06B6D4" opacity="0.7" />
+                            <rect x="28" y="10" width="3" height="3" rx="0.5" fill="url(#slotifyGradSidebar)" opacity="0.85" />
+                        </g>
+                        <text x="80" y="38" font-family="'Poppins', 'Inter', sans-serif" font-size="26" font-weight="800" fill="#1E293B" letter-spacing="-0.5">Slotify</text>
+                        <text x="80" y="55" font-family="'Inter', sans-serif" font-size="9.5" font-weight="600" fill="#64748B" letter-spacing="0.2">Smart Lab Booking System</text>
+                    </svg>
+                    <div class="text-slate-700 text-[9px] px-2.5 mt-0.5 font-bold uppercase tracking-wider">Faculty Portal</div>
+                </div>
+                
+                <div class="space-y-1">
+                    <h3 class="text-[10px] font-extrabold text-slate-700 uppercase tracking-widest px-3 mb-2">Navigation</h3>
+                    <a href="dashboard.html" class="flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-black text-brand-600 bg-brand-50 border border-brand-100 transition active:scale-[0.99]">
+                        <span class="material-symbols-rounded text-brand-600">home</span>
+                        <span>Home</span>
+                    </a>
+                    <a href="calendar_view.html" class="flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition active:scale-[0.99]">
+                        <span class="material-symbols-rounded text-slate-500">calendar_month</span>
+                        <span>Calendar View</span>
+                    </a>
+                    <a href="mybookings.html" class="flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition active:scale-[0.99]">
+                        <span class="material-symbols-rounded text-slate-500">book_online</span>
+                        <span>My Bookings</span>
+                    </a>
+                    <button onclick="openProfileModal()" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition active:scale-[0.99] text-left">
+                        <span class="material-symbols-rounded text-slate-500">person</span>
+                        <span>Profile Settings</span>
+                    </button>
+                </div>
+
+                <div class="space-y-1">
+                    <h3 class="text-[10px] font-extrabold text-slate-700 uppercase tracking-widest px-3 mb-2">Lab Groups</h3>
+                    <div class="space-y-1" id="desktop-filters-container">
+                        <div class="lab-filter active flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition active:scale-[0.99]" data-group="lab123">
+                            <span class="material-symbols-rounded text-slate-500">computer</span>
+                            <span>Lab 1 - 3</span>
+                        </div>
+                        <div class="lab-filter flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition active:scale-[0.99]" data-group="lab456">
+                            <span class="material-symbols-rounded text-slate-500">computer</span>
+                            <span>Lab 4 - 6</span>
+                        </div>
+                        <div class="lab-filter flex items-center space-x-3 px-4 py-3 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition active:scale-[0.99]" data-group="halls">
+                            <span class="material-symbols-rounded text-slate-500">meeting_room</span>
+                            <span>Halls</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-1 border-t border-slate-100 pt-3">
+                <button onclick="logout()" class="w-full flex items-center space-x-3 px-4 py-3.5 rounded-2xl text-sm font-bold text-red-600 hover:bg-red-50 transition active:scale-[0.99] text-left">
+                    <span class="material-symbols-rounded text-red-600">logout</span>
+                    <span>Logout Session</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col min-w-0">
+            
+            <!-- Mobile Top Header -->
+            <header class="md:hidden bg-gradient-to-br from-brand-600 to-indigo-800 text-white rounded-b-[2.2rem] px-5 pt-6 pb-8 shadow-md relative overflow-hidden">
+                <div class="absolute top-[-30%] right-[-10%] w-[60%] h-[60%] rounded-full bg-blue-400/20 blur-3xl pointer-events-none"></div>
+                
+                <div class="flex justify-between items-center relative z-10">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-white/10 border-2 border-white/20 flex items-center justify-center text-white shadow-sm">
+                            <span class="material-symbols-rounded text-white" style="font-size: 20px;">person</span>
+                        </div>
+                        <div>
+                            <p class="text-[9px] text-blue-100 font-bold uppercase tracking-widest leading-none">Welcome Back</p>
+                            <h2 id="mobile-username" class="text-sm font-black mt-0.5">Faculty Member</h2>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="openProfileModal()" class="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition active:scale-95 flex items-center justify-center">
+                            <span class="material-symbols-rounded text-white text-xs">person</span>
+                        </button>
+                        <button onclick="logout()" class="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition active:scale-95 text-red-200 flex items-center justify-center">
+                            <span class="material-symbols-rounded text-red-200 text-xs">logout</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-5 bg-white/10 border border-white/10 rounded-2xl p-4 backdrop-blur-md relative z-10 flex justify-between items-center">
+                    <div>
+                        <h3 id="display-date" class="text-sm font-extrabold text-white">Loading Date...</h3>
+                        <p class="text-[10px] text-blue-200 font-semibold mt-0.5">Pick another day below</p>
+                    </div>
+                    <svg class="w-6 h-6 text-blue-100 opacity-80" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 28px; height: 28px;">
+                        <rect x="12" y="16" width="36" height="24" rx="3" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" />
+                        <rect x="15.5" y="19.5" width="29" height="17" rx="1" fill="currentColor" fill-opacity="0.1" />
+                        <path d="M 8 40 L 52 40 L 49 43 L 11 43 Z" fill="currentColor" />
+                        <rect x="26" y="40" width="8" height="1.5" rx="0.5" fill="#FFFFFF" opacity="0.8" />
+                        <rect x="47" y="13" width="2.5" height="2.5" rx="0.5" fill="currentColor" opacity="0.9" />
+                        <rect x="52" y="8" width="1.5" height="1.5" fill="currentColor" opacity="0.6" />
+                        <rect x="44" y="7" width="1.5" height="1.5" fill="currentColor" opacity="0.8" />
+                        <rect x="10" y="12" width="2.5" height="2.5" rx="0.5" fill="currentColor" opacity="0.9" />
+                        <rect x="5" y="7" width="1.5" height="1.5" fill="currentColor" opacity="0.6" />
+                        <rect x="12" y="6" width="1.5" height="1.5" fill="currentColor" opacity="0.7" />
+                        <rect x="28" y="10" width="2.5" height="2.5" rx="0.5" fill="currentColor" opacity="0.85" />
+                    </svg>
+                </div>
+            </header>
+
+            <!-- Main Workspace content -->
+            <main class="flex-1 px-4 py-6 md:py-0 space-y-6 max-w-lg md:max-w-none mx-auto w-full">
+                
+                <!-- Date selector bar -->
+                <div class="md3-card p-4 space-y-3.5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-extrabold text-slate-700">Pick date:</span>
+                        <div class="hidden md:block">
+                            <h3 id="display-date-desktop" class="text-sm font-extrabold text-slate-900">Date</h3>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <input type="date" id="date-picker" class="flex-1 bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl p-3 outline-none md3-input focus:bg-white">
+                        <button onclick="dateChanged()" id="view-day-btn" class="btn-primary text-xs px-5 py-3 shadow-md">View Day</button>
+                    </div>
+                    
+                    <!-- Admin specific laboratory creation UI -->
+                    <div id="admin-lab-ui" style="display: none;" class="flex space-x-2 w-full mt-3 border-t border-slate-100 pt-3">
+                        <input type="text" id="new-lab-name" placeholder="E.g. Lab 8 Server" class="flex-1 bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold rounded-xl p-3 outline-none focus:bg-white md3-input">
+                        <button onclick="addLab()" class="btn-primary bg-green-600 hover:bg-green-700 text-white text-xs px-5 py-3 shadow-md">Add Space</button>
+                    </div>
+                </div>
+
+                <!-- Stats summary section (Mobile only, mirrors desktop overview cards) -->
+                <div class="md:hidden grid grid-cols-2 gap-3">
+                    <div class="bg-white md3-card p-5 border-l-4 border-brand-600 flex flex-col justify-between min-h-[95px]">
+                        <span class="text-slate-700 font-extrabold text-[9px] uppercase tracking-wider">Today's Bookings</span>
+                        <h2 id="stat-today-bookings" class="text-3xl font-extrabold text-slate-900 leading-none">0</h2>
+                    </div>
+                    <div class="bg-white md3-card p-5 border-l-4 border-green-600 flex flex-col justify-between min-h-[95px]">
+                        <span class="text-slate-700 font-extrabold text-[9px] uppercase tracking-wider">Available Labs</span>
+                        <h2 id="stat-avail-labs" class="text-3xl font-extrabold text-slate-900 leading-none">0</h2>
+                    </div>
+                </div>
+
+                <!-- Lab groups selectors (Mobile only, horizontal sliders) -->
+                <div class="md:hidden space-y-2">
+                    <h3 class="text-xs font-extrabold text-slate-700 uppercase tracking-widest">Laboratory Spaces</h3>
+                    <div class="flex space-x-2 overflow-x-auto no-scrollbar py-1" id="mobile-filters-container">
+                        <button class="lab-filter active px-4 py-2.5 rounded-full text-xs font-extrabold bg-brand-50 text-brand-600 border border-brand-100 whitespace-nowrap active:scale-95 transition" data-group="lab123">Lab 1 - 3</button>
+                        <button class="lab-filter px-4 py-2.5 rounded-full text-xs font-extrabold bg-white text-slate-700 border border-slate-200 whitespace-nowrap active:scale-95 transition" data-group="lab456">Lab 4 - 6</button>
+                        <button class="lab-filter px-4 py-2.5 rounded-full text-xs font-extrabold bg-white text-slate-700 border border-slate-200 whitespace-nowrap active:scale-95 transition" data-group="halls">Halls</button>
+                    </div>
+                </div>
+
+                <!-- Timetable timeline cards -->
+                <div class="space-y-4">
+                    <h3 class="text-xs font-extrabold text-slate-700 uppercase tracking-widest">Schedules & Reservations</h3>
+                    <div id="timetable-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-10">
+                        <!-- Dynamic Period boxes -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Booking Confirmation Bottom Drawer modal -->
+    <div id="booking-modal" class="hidden fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white w-full max-w-md rounded-t-[2.5rem] p-6 shadow-2xl border-t border-slate-100 safe-area-bottom transform transition-transform slide-up">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+            
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-brand-100">
+                    <span class="material-symbols-rounded text-brand-600" style="font-size: 28px;">check_box</span>
+                </div>
+                <h3 class="text-xl font-extrabold text-slate-900">Confirm Booking</h3>
+                <p id="modal-text" class="text-xs text-slate-500 mt-1 font-semibold"></p>
+            </div>
+            
+            <div class="flex flex-col space-y-3">
+                <button id="confirm-btn" onclick="confirmBooking()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-[0.98] transition text-sm">Confirm</button>
+                <button onclick="closeModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-4 rounded-2xl active:scale-[0.98] transition text-sm">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile details overlay drawer -->
+    <div id="profile-modal" class="hidden fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white w-full max-w-md rounded-t-[2.5rem] p-6 shadow-2xl border-t border-slate-100 safe-area-bottom transform transition-transform slide-up">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+            
+            <div class="flex flex-col items-center text-center mb-6 border-b border-slate-100 pb-5">
+                <div class="w-20 h-20 rounded-full bg-brand-50 border-4 border-slate-100 shadow-md flex items-center justify-center text-brand-600 mb-2">
+                    <span class="material-symbols-rounded text-brand-600" style="font-size: 40px;">person</span>
+                </div>
+                <h3 id="profile-name" class="text-lg font-extrabold text-slate-900 mt-1">Faculty Member</h3>
+                <span id="profile-role" class="mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-600 uppercase">Faculty</span>
+            </div>
+
+            <div class="space-y-3.5 mb-6 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-400 font-semibold">Institution</span>
+                    <span class="font-extrabold text-slate-800">Slotify</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400 font-semibold">Access Level</span>
+                    <span class="font-extrabold text-slate-800">Faculty Panel</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col space-y-3">
+                <button onclick="logout()" class="w-full btn-danger py-4 text-sm">Logout Session</button>
+                <button onclick="closeProfileModal()" class="w-full btn-secondary py-4 text-sm">Close Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar (Mobile only) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 pt-2 pb-6 z-40 flex justify-around items-center shadow-2xl safe-area-bottom" style="padding-bottom: calc(16px + env(safe-area-inset-bottom, 16px));">
+        <a href="dashboard.html" class="flex flex-col items-center space-y-1 text-brand-600">
+            <div class="nav-pill nav-pill-active py-1 px-4 rounded-full flex items-center justify-center">
+                <span class="material-symbols-rounded">home</span>
+            </div>
+            <span class="text-[9px] font-bold tracking-wider text-brand-700">Home</span>
+        </a>
+        <a href="calendar_view.html" class="flex flex-col items-center space-y-1 text-slate-500">
+            <div class="nav-pill py-1 px-4 rounded-full flex items-center justify-center">
+                <span class="material-symbols-rounded">calendar_month</span>
+            </div>
+            <span class="text-[9px] font-bold tracking-wider text-slate-700">Calendar</span>
+        </a>
+        <a href="mybookings.html" class="flex flex-col items-center space-y-1 text-slate-500">
+            <div class="nav-pill py-1 px-4 rounded-full flex items-center justify-center">
+                <span class="material-symbols-rounded">book_online</span>
+            </div>
+            <span class="text-[9px] font-bold tracking-wider text-slate-700">Bookings</span>
+        </a>
+        <button onclick="openProfileModal()" class="flex flex-col items-center space-y-1 text-slate-500">
+            <div class="nav-pill py-1 px-4 rounded-full flex items-center justify-center">
+                <span class="material-symbols-rounded">person</span>
+            </div>
+            <span class="text-[9px] font-bold tracking-wider text-slate-700">Profile</span>
+        </button>
+    </nav>
+
+    <!-- JS Scripts & API Integration -->
+    <script>
+        let currentUserId = null;
+        let isAdmin = false;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentDate = urlParams.get('date') || new Date().toISOString().split('T')[0];
+        let selectedSlot = null;
+
+        document.getElementById('date-picker').value = currentDate;
+
+        async function safeFetch(path, options = {}) {
+            try {
+                const res = await fetch(path, options);
+                if (!res.ok) {
+                    console.error("HTTP Error:", res.status);
+                    return null;
+                }
+                const text = await res.text();
+                try {
+                    return text ? JSON.parse(text) : null;
+                } catch (e) {
+                    console.error("Invalid JSON:", text);
+                    return null;
+                }
+            } catch (err) {
+                console.error("Network error:", err);
+                return null;
+            }
+        }
+
+        function toggleMenu() {
+            // Deprecated mobile menu logic in favor of bottom nav, kept signature
+        }
+
+        function openProfileModal() {
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.add('hidden');
+        }
+
+        async function loadUser() {
+            try {
+                const user = await safeFetch("/current_user");
+                if (!user || !user.id) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                currentUserId = user.id;
+                isAdmin = (user.role === 'admin');
+                
+                document.getElementById('mobile-username').innerText = user.name || "Faculty Member";
+                document.getElementById('profile-name').innerText = user.name || "Faculty Member";
+                document.getElementById('profile-role').innerText = user.role || "Faculty";
+
+                if (isAdmin) {
+                    const adminLabUI = document.getElementById('admin-lab-ui');
+                    if (adminLabUI) adminLabUI.style.display = 'flex';
+                }
+            } catch(e) {
+                console.error(e);
+                window.location.href = 'index.html';
+            }
+        }
+
+        let labs = [];
+        let currentGroup = "lab123";
+
+        function getFilteredLabs() {
+            if (!Array.isArray(labs)) return [];
+            if (currentGroup === "lab123") {
+                return labs.filter(l => ["Lab 1", "Lab 2", "Lab 3"].includes(l.lab_name));
+            }
+            if (currentGroup === "lab456") {
+                return labs.filter(l => ["Lab 4", "Lab 5", "Lab 6"].includes(l.lab_name));
+            }
+            if (currentGroup === "halls") {
+                return labs.filter(l => l.lab_name && (l.lab_name.toLowerCase().includes("hall") || l.lab_name.toLowerCase().includes("seminar")));
+            }
+            return labs;
+        }
+
+        async function loadLabs() {
+            try {
+                // Cache labs in sessionStorage — they rarely change mid-session
+                const cached = sessionStorage.getItem('labs_cache');
+                if (cached) {
+                    labs = JSON.parse(cached);
+                } else {
+                    labs = await safeFetch("/labs");
+                    if (!Array.isArray(labs)) labs = [];
+                    sessionStorage.setItem('labs_cache', JSON.stringify(labs));
+                }
+
+                // Update header stats counter
+                const statsAvail = document.getElementById('stat-avail-labs');
+                if (statsAvail) {
+                    statsAvail.innerText = labs.filter(l => l.status !== 'maintenance').length;
+                }
+            } catch(e) {
+                console.error(e);
+                labs = [];
+            }
+        }
+
+        async function addLab() {
+            const name = document.getElementById('new-lab-name').value;
+            if (!name) return alert('Enter lab name');
+            const res = await fetch("/add_lab", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('new-lab-name').value = '';
+                await initializeDashboard();
+            } else {
+                alert(data.message || 'Error adding lab');
+            }
+        }
+
+        async function deleteLab(id) {
+            if (!confirm('Are you sure you want to delete this lab?')) return;
+            const res = await fetch("/delete_lab", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ id })
+            });
+            const data = await res.json();
+            if (data.success) {
+                await initializeDashboard();
+            } else {
+                alert(data.message || 'Error deleting lab');
+            }
+        }
+
+        function showSkeleton() {
+            const container = document.getElementById('timetable-grid');
+            if (!container) return;
+            const skeletonCard = () => `
+                <div class="md3-card p-5 space-y-5 animate-pulse">
+                    <div class="flex justify-center items-center pb-1.5 border-b border-slate-100">
+                        <div class="h-3 w-16 bg-slate-200 rounded-full"></div>
+                    </div>
+                    <div class="space-y-2.5">
+                        ${[1,2,3].map(() => `
+                            <div class="p-3 rounded-2xl border border-slate-200 bg-slate-50/40 flex flex-col space-y-2">
+                                <div class="h-2.5 w-20 bg-slate-200 rounded-full"></div>
+                                <div class="h-7 w-full bg-slate-200 rounded-xl"></div>
+                            </div>`).join('')}
+                    </div>
+                </div>`;
+            container.innerHTML = [1,2,3,4,5,6,7,8].map(() => skeletonCard()).join('');
+        }
+
+        function renderDashboard() {
+            const container = document.getElementById('timetable-grid');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            const periods = [1, 2, 3, 4, 5, 6, 7, 8];
+            
+            const dateObj = new Date(currentDate);
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayName = days[dateObj.getDay()];
+            const shortDay = dayName ? dayName.substring(0, 3) : '';
+            
+            const displayTitle = `${dayName || 'Date'} (${currentDate.split('-').reverse().join('-')})`;
+            document.getElementById('display-date').innerText = displayTitle;
+            const desktopTitle = document.getElementById('display-date-desktop');
+            if(desktopTitle) desktopTitle.innerText = displayTitle;
+
+            periods.forEach(period => {
+                const box = document.createElement('div');
+                box.className = 'md3-card p-5 space-y-5';
+                
+                box.innerHTML = `
+                    <div class="flex justify-center items-center pb-1.5 border-b border-slate-100">
+                        <span class="text-xs font-extrabold text-slate-900">Period ${period}</span>
+                    </div>
+                `;
+
+                const labList = document.createElement('div');
+                labList.className = 'space-y-2.5';
+
+                const filtered = getFilteredLabs();
+                if (Array.isArray(filtered)) {
+                    filtered.forEach(labObj => {
+                        const labName = labObj.lab_name;
+                        const labId = labObj.id;
+                        
+                        const selectedDay = getSelectedDay(currentDate);
+                        const block = isBlocked(labName, period, selectedDay);
+                        const booking = getBooking(labName, period, currentDate);
+                        let statusHtml = '';
+                        let borderStyle = 'border-slate-200 bg-slate-50/40';
+                        let indicatorDot = 'bg-green-500';
+                        
+                        let isUnderMaintenanceOnSelectedDay = false;
+                        let completionDate = 'TBD';
+                        if (labObj.status === 'maintenance') {
+                            if (labObj.maintenance_end) {
+                                const dateList = labObj.maintenance_end.split(',').map(d => d.trim());
+                                if (dateList.includes(currentDate)) {
+                                    isUnderMaintenanceOnSelectedDay = true;
+                                    // format each date to DD/MM/YYYY
+                                    completionDate = dateList.map(d => d.split('-').reverse().join('/')).join(', ');
+                                }
+                            } else {
+                                isUnderMaintenanceOnSelectedDay = true;
+                            }
+                        }
+
+                        if (isUnderMaintenanceOnSelectedDay) {
+                            indicatorDot = 'bg-yellow-500';
+                            borderStyle = 'border-yellow-200 bg-yellow-50/50';
+                            statusHtml = `
+                                <div class="w-full text-left space-y-1.5">
+                                    <span class="chip chip-warning text-[9px] font-bold w-full justify-center flex items-center"><span class="material-symbols-rounded text-xs mr-1">build</span> Maintenance</span>
+                                    <p class="text-[10px] text-slate-800 font-bold text-center">🔧 Scheduled: ${completionDate}</p>
+                                    <button class="w-full text-[10px] font-bold py-2 rounded-xl cursor-not-allowed flex items-center justify-center space-x-1" style="background-color: #E2E8F0; color: #1E293B;" disabled><span class="material-symbols-rounded text-xs mr-1">lock</span> Locked</button>
+                                </div>
+                            `;
+                        } else if (block) {
+                            indicatorDot = 'bg-slate-500';
+                            borderStyle = 'border-slate-200 bg-slate-50/40';
+                            statusHtml = `
+                                <div class="w-full text-left space-y-1.5">
+                                    <span class="chip chip-cancelled text-[9px] font-bold w-full justify-center flex items-center"><span class="material-symbols-rounded text-xs mr-1">block</span> Unavailable</span>
+                                    <button class="w-full text-[10px] font-bold py-2 rounded-xl cursor-not-allowed flex items-center justify-center space-x-1" style="background-color: #E2E8F0; color: #1E293B;" disabled><span class="material-symbols-rounded text-xs mr-1">calendar_month</span> <span>${block.subject}</span></button>
+                                </div>
+                            `;
+                        } else if (booking) {
+                            indicatorDot = 'bg-red-500';
+                            borderStyle = 'border-red-200 bg-red-50/30';
+                            if (booking.faculty_id === currentUserId) {
+                                statusHtml = `
+                                    <div class="w-full text-center space-y-1.5">
+                                        <span class="chip chip-booked text-[9px] font-bold w-full justify-center flex items-center"><span class="material-symbols-rounded text-xs mr-1">bookmark</span> Booked (You)</span>
+                                        <button type="button" onclick="cancelBooking('${labName}', ${period})" class="cancel-booking-btn w-full btn-danger py-2 rounded-xl text-[10px] transition active:scale-95">Cancel</button>
+                                    </div>
+                                `;
+                            } else {
+                                statusHtml = `
+                                    <div class="w-full text-center space-y-1.5">
+                                        <span class="chip chip-booked text-[9px] font-bold w-full justify-center flex items-center"><span class="material-symbols-rounded text-xs mr-1">bookmark</span> Booked</span>
+                                        <p class="text-[10px] text-slate-800 text-center font-bold py-2 border border-slate-300 bg-slate-200/50 rounded-xl cursor-not-allowed flex items-center justify-center"><span class="material-symbols-rounded text-xs mr-1 text-slate-600">person</span> Prof. ${booking.faculty_name}</p>
+                                    </div>
+                                `;
+                            }
+                        } else {
+                            statusHtml = `<button class="w-full btn-primary py-2 rounded-xl text-[10px] transition active:scale-[0.98] book-btn" onclick="bookLab('${labName}', ${period})">Book Now</button>`;
+                        }
+
+                        const delBtn = isAdmin ? `<button onclick="deleteLab(${labId})" class="text-red-500 hover:text-red-700 transition flex items-center justify-center" title="Delete Lab"><span class="material-symbols-rounded text-sm">delete</span></button>` : '';
+
+                        const labItem = document.createElement('div');
+                        labItem.className = `p-3 rounded-2xl border ${borderStyle} flex flex-col justify-between relative`;
+                        labItem.innerHTML = `
+                            <div class="mb-2 pl-1 font-semibold text-slate-800 flex items-center justify-between text-xs">
+                                <span class="flex items-center space-x-1.5">
+                                    <span class="w-2 h-2 rounded-full ${indicatorDot}"></span>
+                                    <span>${labName}</span>
+                                </span>
+                                ${delBtn}
+                            </div>
+                            ${statusHtml}
+                        `;
+                        labList.appendChild(labItem);
+                    });
+                }
+                box.appendChild(labList);
+                container.appendChild(box);
+            });
+
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        function getTimeForPeriod(p) {
+            const times = {
+                1: "08:45 AM - 09:35 AM",
+                2: "09:35 AM - 10:25 AM",
+                3: "10:45 AM - 11:35 AM",
+                4: "11:35 AM - 12:25 PM",
+                5: "01:15 PM - 02:05 PM",
+                6: "02:05 PM - 02:55 PM",
+                7: "03:10 PM - 04:00 PM",
+                8: "04:00 PM - 04:50 PM"
+            };
+            return times[p] || "Session Time";
+        }
+
+        async function initializeDashboard() {
+            // Run loadLabs and loadTimetable in parallel.
+            // loadTimetable also populates bookings, so no separate loadBookings() call needed.
+            await Promise.all([
+                loadLabs(),
+                loadTimetable()
+            ]);
+            renderDashboard();
+        }
+
+        async function dateChanged() {
+            currentDate = document.getElementById('date-picker').value;
+            // Show skeleton and button loading state immediately for instant feedback
+            showSkeleton();
+            const btn = document.getElementById('view-day-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+            await initializeDashboard();
+            if (btn) { btn.disabled = false; btn.textContent = 'View Day'; }
+        }
+
+        let timetable = [];
+
+        async function loadTimetable() {
+            try {
+                const data = await safeFetch(`/api/timetable?date=${currentDate}`, { credentials: "include" });
+                timetable = data ? (data.fixed || []) : [];
+
+                // Reuse bookings from the timetable response — avoid a separate /bookings call
+                if (data && Array.isArray(data.bookings)) {
+                    bookings = data.bookings.map(b => ({
+                        lab: b.lab,
+                        period: b.period,
+                        date: currentDate,
+                        faculty_id: b.faculty_id,
+                        faculty_name: b.faculty_name,
+                        id: b.id,
+                        own: b.own
+                    }));
+
+                    // Update today's bookings stat counter
+                    const statsBookings = document.getElementById('stat-today-bookings');
+                    if (statsBookings) statsBookings.innerText = bookings.length;
+                }
+            } catch (error) {
+                console.error("Error fetching timetable:", error);
+                timetable = [];
+            }
+        }
+        
+        function getSelectedDay(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            const date = new Date(parts[0], parts[1] - 1, parts[2]);
+            return date.toLocaleDateString("en-US", { weekday: "long" });
+        }
+
+        function isBlocked(lab, period, day) {
+            if (!lab || !day) return null;
+            return timetable.find(t =>
+                t.day.toLowerCase() === day.toLowerCase() &&
+                t.period == period &&
+                t.lab.toLowerCase().trim() === lab.toLowerCase().trim()
+            );
+        }
+
+        let bookings = [];
+
+        async function loadBookings() {
+            // Bookings are now loaded as part of loadTimetable() from the /api/timetable response.
+            // This function is kept for compatibility with confirmBooking() and cancelBooking() flows.
+            try {
+                const data = await safeFetch(`/api/timetable?date=${currentDate}`, { credentials: "include" });
+                if (data && Array.isArray(data.bookings)) {
+                    bookings = data.bookings.map(b => ({
+                        lab: b.lab,
+                        period: b.period,
+                        date: currentDate,
+                        faculty_id: b.faculty_id,
+                        faculty_name: b.faculty_name,
+                        id: b.id,
+                        own: b.own
+                    }));
+                    const statsBookings = document.getElementById('stat-today-bookings');
+                    if (statsBookings) statsBookings.innerText = bookings.length;
+                }
+            } catch (error) {
+                console.error("Error refreshing bookings:", error);
+            }
+        }
+
+        function getBooking(lab, period, date) {
+            return bookings.find(b =>
+                b.lab === lab &&
+                b.period === period &&
+                b.date === date
+            );
+        }
+
+        async function bookLab(labName, period) {
+            selectedSlot = { lab: labName, period: period };
+            document.getElementById('modal-text').innerText = `Book ${labName} for Period ${period} on ${currentDate.split('-').reverse().join('/')}?`;
+            document.getElementById('booking-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('booking-modal').classList.add('hidden');
+        }
+
+        async function confirmBooking() {
+            if (!selectedSlot) return;
+            const labName = selectedSlot.lab;
+            const period = selectedSlot.period;
+            const date = currentDate;
+            const day = new Date(date).toLocaleDateString("en-US", { weekday: "long" });
+            
+            const payload = {
+                lab: labName,
+                period: period,
+                date: date,
+                day: day
+            };
+            
+            closeModal();
+            
+            try {
+                const res = await fetch('/api/book', {
+                     method: "POST",
+                     headers: {
+                        "Content-Type": "application/json"
+                     },
+                     body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                
+                if (res.status === 409) {
+                    alert("Slot already booked");
+                } else if (!res.ok) {
+                    alert(data.message || "Booking failed");
+                } else if (!data.success) {
+                    alert("Booking failed: " + (data.message || "Unknown error"));
+                }
+            } catch (err) {
+                console.error("Booking error:", err);
+                alert("Booking failed due to a network error.");
+            }
+
+            await loadBookings();
+            renderDashboard();
+        }
+
+        async function cancelBooking(lab, period) {
+            if (!confirm('Cancel this booking?')) return;
+            const date = currentDate;
+
+            await fetch("/cancel", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ lab, period, date })
+            });
+
+            await loadBookings();
+            renderDashboard();
+        }
+
+        function logout() {
+            localStorage.removeItem('expo-token');
+            fetch('/api/logout').catch(() => {});
+            window.location.href = 'index.html';
+        }
+
+        function setupFilters() {
+            const handlers = (el) => {
+                document.querySelectorAll(".lab-filter").forEach(item => {
+                    item.classList.remove("active", "bg-brand-50", "text-brand-600", "border-brand-100");
+                    item.classList.add("text-slate-600", "bg-white", "border-slate-200");
+                });
+
+                const group = el.dataset.group;
+                currentGroup = group;
+
+                // Sync highlights across desktop and mobile filters
+                document.querySelectorAll(`.lab-filter[data-group="${group}"]`).forEach(item => {
+                    item.classList.add("active", "bg-brand-50", "text-brand-600", "border-brand-100");
+                    item.classList.remove("text-slate-600", "bg-white", "border-slate-200");
+                });
+
+                renderDashboard();
+            };
+
+            document.querySelectorAll(".lab-filter").forEach(item => {
+                item.addEventListener("click", function() {
+                    handlers(this);
+                });
+            });
+        }
+
+        window.onload = async function() {
+            lucide.createIcons();
+            setupFilters();
+            showSkeleton(); // Show skeleton immediately — never show a blank page
+            // Run loadUser and initializeDashboard in parallel — they are independent
+            await Promise.all([
+                loadUser(),
+                initializeDashboard()
+            ]);
+
+            if (urlParams.get('tab') === 'profile') {
+                openProfileModal();
+            }
+
+            // Check if we need to show permission box
+            if (Notification.permission === 'default' && !localStorage.getItem('notif_dismissed')) {
+                document.getElementById('notif-permission-box').classList.remove('hidden');
+            }
+        };
+
+        function dismissNotifBox() {
+            document.getElementById('notif-permission-box').classList.add('hidden');
+            localStorage.setItem('notif_dismissed', 'true');
+        }
+
+        async function requestNotificationPermission() {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                console.log('✅ Permission granted');
+            }
+            dismissNotifBox();
+        }
+
+        // Listen for token from Mobile App (Expo)
+        window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data.type === 'expo-token') {
+                console.log("📱 Mobile Token Received on Dashboard:", data.token);
+                localStorage.setItem('expo-token', data.token);
+                saveToken(data.token);
+            }
+        });
+
+        async function saveToken(token) {
+            const res = await fetch('/save-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: token })
+            });
+            await res.json();
+        }
+
+        // On load, check if we have a stored token and try to save it again (in case login was just completed)
+        const storedToken = localStorage.getItem('expo-token');
+        if (storedToken) {
+            saveToken(storedToken);
+        }
+
+        // Initialize Socket.io connection for real-time dashboard updates
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : BACKEND_URL;
+        const socket = io(API_BASE);
+
+        function showRealtimeToast(title, message) {
+            let container = document.getElementById('realtime-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'realtime-toast-container';
+                container.className = 'fixed top-5 left-1/2 -translate-x-1/2 md:left-auto md:right-5 md:translate-x-0 z-[9999] space-y-3 max-w-sm w-full px-4 md:px-0 pointer-events-none';
+                
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    @keyframes slideInToast {
+                        from { transform: translateY(-20px) scale(0.95); opacity: 0; }
+                        to { transform: translateY(0) scale(1); opacity: 1; }
+                    }
+                    @keyframes fadeOutToast {
+                        from { transform: translateY(0) scale(1); opacity: 1; }
+                        to { transform: translateY(-20px) scale(0.95); opacity: 0; }
+                    }
+                    .toast-slide-in {
+                        animation: slideInToast 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                    }
+                    .toast-fade-out {
+                        animation: fadeOutToast 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                    }
+                `;
+                document.head.appendChild(style);
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = 'bg-white/95 backdrop-blur-md border border-slate-100 shadow-2xl p-4 rounded-2xl flex items-start space-x-3 pointer-events-auto toast-slide-in';
+            
+            toast.innerHTML = `
+                <div class="bg-brand-50 border border-brand-100 p-2 rounded-xl text-brand-600 flex-shrink-0 flex items-center justify-center">
+                    <span class="material-symbols-rounded text-brand-600 text-sm">notifications</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-black text-slate-900 leading-none">${title}</p>
+                    <p class="text-[11px] font-bold text-slate-500 mt-1 leading-normal">${message}</p>
+                </div>
+                <button class="text-slate-400 hover:text-slate-600 transition flex items-center justify-center" onclick="this.parentElement.remove()">
+                    <span class="material-symbols-rounded text-slate-500 text-xs">close</span>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('toast-slide-in');
+                toast.classList.add('toast-fade-out');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 6000);
+        }
+        
+        socket.on('notification_created', (data) => {
+            console.log("⚡ Real-time Event: notification_created", data);
+            showRealtimeToast(data.title, data.message);
+        });
+        
+        socket.on('lab_status_updated', (data) => {
+            console.log("⚡ Real-time Event: lab_status_updated", data);
+            const lab = labs.find(l => l.id == data.lab_id);
+            if (lab) {
+                lab.status = data.status;
+                lab.maintenance_reason = data.reason;
+                lab.maintenance_end = data.expected_end;
+                renderDashboard();
+            } else {
+                loadLabs().then(() => renderDashboard());
+            }
+        });
+        
+        socket.on('booking_created', (data) => {
+            console.log("⚡ Real-time Event: booking_created", data);
+            const exists = bookings.some(b => b.lab === data.lab && b.period === data.period && b.date === data.date);
+            if (!exists) {
+                bookings.push({
+                    lab: data.lab,
+                    period: data.period,
+                    date: data.date,
+                    faculty_id: data.faculty_id,
+                    faculty_name: data.faculty_name
+                });
+                renderDashboard();
+            }
+        });
+        
+        socket.on('booking_cancelled', (data) => {
+            console.log("⚡ Real-time Event: booking_cancelled", data);
+            bookings = bookings.filter(b => !(b.lab === data.lab && b.period === data.period && b.date === data.date));
+            renderDashboard();
+        });
+        
+        socket.on('timetable_updated', () => {
+            console.log("⚡ Real-time Event: timetable_updated");
+            loadTimetable().then(() => renderDashboard());
+        });
+    </script>
+
+    <!-- FIREBASE NOTIFICATION INTEGRATION -->
+    <script type="module" src="/src/config.js"></script>
+</body>
+</html>
