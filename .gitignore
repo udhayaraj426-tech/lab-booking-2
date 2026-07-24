@@ -36,5 +36,4 @@ firebase_key.json
 
 # Timetable outputs and logs
 *.pdf
-*.log
-*.txt
+*.log

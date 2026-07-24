@@ -1,0 +1,10 @@
+flask
+flask-cors
+flask-wtf
+gunicorn
+firebase-admin
+flask-socketio
+psycopg2-binary
+python-dotenv
+pypdf
+flask-compress
