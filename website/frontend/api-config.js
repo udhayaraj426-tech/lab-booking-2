@@ -5,6 +5,6 @@
  * change ONLY this one line. All pages use this file.
  * ─────────────────────────────────────────────────
  */
-const BACKEND_URL = 'https://lab-booking-app.onrender.com';
+const BACKEND_URL = 'https://lab-booking-2.onrender.com';
 // ↑ Replace this with your Railway URL when you migrate
 // Example: 'https://lab-booking-app.up.railway.app'
